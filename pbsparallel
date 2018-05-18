@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+from pbshax import parallel
+
+if __name__ == "__main__":
+    verbose = eval(ENV.get('PBSPAR_OUTPUT', 'True'))
+    cmds = [l.strip() for l in stdin]
+    parallel(cmds, verbose)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import print_function, division
 from sys import stdin, stdout, stderr
 from os import environ as ENV
@@ -13,7 +12,7 @@ def worker(node, jobq, outq):
         cmd = jobq.get()
         if cmd is None:
             break
-        cmd = "pbsdsh -n {} -- bash -c".format(node).split() + [cmd]
+        cmd = "pbsdsh -n {} -- bash -l -c".format(node).split() + [cmd]
         out = spc.check_output(cmd, stderr=spc.STDOUT)
         outq.put(out)
         jobq.task_done()
@@ -28,9 +27,9 @@ def outputter(outq):
         outq.task_done()
 
 
-def parallel(commands, verbose=True, ncpu=None):
-    if ncpu is None:
-        ncpu = int(ENV.get('PBS_NCPUS', 1))
+def parallel(commands, verbose=True, ncpus=None):
+    if ncpus is None:
+        ncpus = int(ENV.get('PBS_NCPUS', 1))
 
     jobq = Queue()
     outq = Queue()
@@ -40,12 +39,12 @@ def parallel(commands, verbose=True, ncpu=None):
         jobq.put(cmd)
 
     # Make workers, add one poison pill per worker
-    for i in range(1, ncpu+1):
+    for i in range(1, ncpus+1):
         t = Thread(target=worker, args=(i, jobq, outq))
         t.start()
         nodes.append(t)
         jobq.put(None)
-    outt = Thread(target=outputter, args=(outq))
+    outt = Thread(target=outputter, args=(outq,))
     outt.start()
 
     # Wait for work to finish
@@ -57,9 +56,3 @@ def parallel(commands, verbose=True, ncpu=None):
     outt.join()
     for t in nodes:
         t.join()
-
-
-if __name__ == "__main__":
-    verbose = eval(ENV.get('PBSPAR_OUTPUT', 'True'))
-    cmds = [l.strip() for l in stdin]
-    parallel(cmds, verbose)

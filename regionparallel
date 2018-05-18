@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import argparse as ap
+from sys import stderr, stdout, stdin
+from os import environ as ENV
+from pbshax import parallel
+
+def parsefai(fai):
+    with open(fai) as fh:
+        for l in fh:
+            cname, clen, _, _, _ = l.split()
+            clen = int(clen)
+            yield cname, clen
+
+
+def make_regions(refpath, window=1e6):
+    window = int(window)
+    fai = refpath+".fai"
+    windows = []
+    for cname, clen in parsefai(fai):
+        for start in range(0, clen, window):
+            wlen = min(clen - start, window)
+            windows.append("{}:{}-{}".format(cname, start, start+wlen))
+    return windows
+
+
+def main():
+    a = ap.ArgumentParser("Make a list of regions of given size from faidx")
+    a.add_argument("-s", "--size", type=int, default=1000000,
+                   help="Size of each region chunk")
+    a.add_argument("-r", "--reference", type=str, required=True,
+                   help="Fasta reference file (must be indexed with samtools faidx)")
+    a.add_argument("-p", "--procs", default=None,
+                   help="Dry run: only print commands")
+    a.add_argument("-n", "--no-run", action="store_true",
+                   help="Dry run: only print commands")
+    a.add_argument("command", type=str,
+                   help="Command to run. Regions are inserted where {region} occurs (use in ouput file name)")
+    args = a.parse_args()
+
+    commands = []
+    regions = make_regions(args.reference)
+    for region in regions:
+        cmd = args.command.replace('{region}', region)
+        commands.append(cmd)
+    if args.no_run:
+        print(*commands, sep="\n")
+    else:
+        parallel(commands, ncpus=args.procs)
+
+
+if __name__ == "__main__":
+    main()
