@@ -24,15 +24,16 @@ def make_regions(refpath, window=1e6):
 
 
 def main():
-    a = ap.ArgumentParser("Make a list of regions of given size from faidx")
+    a = ap.ArgumentParser(prog="regionparallel",
+                          description="Make a list of regions of given size from faidx")
     a.add_argument("-s", "--size", type=int, default=1000000,
                    help="Size of each region chunk")
-    a.add_argument("-r", "--reference", type=str, required=True,
-                   help="Fasta reference file (must be indexed with samtools faidx)")
     a.add_argument("-p", "--procs", default=None,
                    help="Dry run: only print commands")
     a.add_argument("-n", "--no-run", action="store_true",
                    help="Dry run: only print commands")
+    a.add_argument("-r", "--reference", type=str, required=True,
+                   help="Fasta reference file (must be indexed with samtools faidx)")
     a.add_argument("command", type=str,
                    help="Command to run. Regions are inserted where {region} occurs (use in ouput file name)")
     args = a.parse_args()
