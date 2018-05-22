@@ -3,6 +3,7 @@ import argparse as ap
 from sys import stderr, stdout, stdin
 from os import environ as ENV
 from pbshax import parallel
+import os
 
 def parsefai(fai):
     with open(fai) as fh:
@@ -34,14 +35,20 @@ def main():
                    help="Dry run: only print commands")
     a.add_argument("-r", "--reference", type=str, required=True,
                    help="Fasta reference file (must be indexed with samtools faidx)")
+    a.add_argument("-f", "--regions-finished", type=str, required=False,
+                   help="List of regions which have finished, which will be not be re-done.")
     a.add_argument("command", type=str,
-                   help="Command to run. Regions are inserted where {region} occurs (use in ouput file name)")
+                   help="Command to run. Regions are inserted where {region} occurs (use in ouput file name).")
     args = a.parse_args()
 
     commands = []
-    regions = make_regions(args.reference)
+    regions = make_regions(args.reference, args.size)
+    if args.regions_finished and os.path.exists(args.regions_finished):
+        done = set([l.strip() for l in open(args.regions_finished)])
+        regions = list(set(regions) - done)
     for region in regions:
-        cmd = args.command.replace('{region}', region)
+        donecmd = " && echo " + region + " >> " + args.regions_finished
+        cmd = args.command.replace('{region}', region) + donecmd
         commands.append(cmd)
     if args.no_run:
         print(*commands, sep="\n")

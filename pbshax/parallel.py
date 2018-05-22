@@ -13,7 +13,12 @@ def worker(node, jobq, outq):
         if cmd is None:
             break
         cmd = "pbsdsh -n {} -- bash -l -c".format(node).split() + [cmd]
-        out = spc.check_output(cmd, stderr=spc.STDOUT)
+        try:
+            out = spc.check_output(cmd, stderr=spc.STDOUT)
+        except spc.CalledProcessError as exc:
+            outq.put(exc.output)
+            jobq.task_done()
+            break
         outq.put(out)
         jobq.task_done()
 
@@ -23,7 +28,9 @@ def outputter(outq):
         out = outq.get()
         if out is None:
             break
-        print(out)
+        if isinstance(out, bytes):
+            out = out.decode("utf8")
+        print(out, end="")
         outq.task_done()
 
 
@@ -47,12 +54,8 @@ def parallel(commands, verbose=True, ncpus=None):
     outt = Thread(target=outputter, args=(outq,))
     outt.start()
 
-    # Wait for work to finish
-    jobq.join()
-    outq.put(None)
-    outq.join()
-
-    # join threads
-    outt.join()
+    # Join threads
     for t in nodes:
         t.join()
+    outq.put(None)
+    outt.join()
