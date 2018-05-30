@@ -20,7 +20,7 @@ def make_regions(refpath, window=1e6):
     for cname, clen in parsefai(fai):
         for start in range(0, clen, window):
             wlen = min(clen - start, window)
-            windows.append("{}:{}-{}".format(cname, start, start+wlen))
+            windows.append("{}:{:09d}-{:09d}".format(cname, start, start+wlen))
     return windows
 
 
@@ -29,8 +29,8 @@ def main():
                           description="Make a list of regions of given size from faidx")
     a.add_argument("-s", "--size", type=int, default=1000000,
                    help="Size of each region chunk")
-    a.add_argument("-p", "--procs", default=None,
-                   help="Dry run: only print commands")
+    a.add_argument("-p", "--procs", default=None, type=int,
+                   help="Number of jobs to run in parallel (default: $PBS_NCPUS)")
     a.add_argument("-n", "--no-run", action="store_true",
                    help="Dry run: only print commands")
     a.add_argument("-r", "--reference", type=str, required=True,
