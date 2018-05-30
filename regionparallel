@@ -29,7 +29,7 @@ def main():
                           description="Make a list of regions of given size from faidx")
     a.add_argument("-s", "--size", type=int, default=1000000,
                    help="Size of each region chunk")
-    a.add_argument("-b", "--base", default=None, type=int, default=1,
+    a.add_argument("-b", "--base", type=int, default=1,
                    help="Coordinate system: 0 means python-style slice indexing, 1 is R-style 1-based indexing. Default 1")
     a.add_argument("-p", "--procs", default=None, type=int,
                    help="Number of jobs to run in parallel (default: $PBS_NCPUS)")
