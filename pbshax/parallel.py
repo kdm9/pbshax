@@ -5,6 +5,7 @@ import itertools as itl
 import subprocess as spc
 from threading import Thread
 from queue import Queue
+from random import shuffle
 
 
 def worker(node, jobq, outq):
@@ -38,6 +39,7 @@ def parallel(commands, verbose=True, ncpus=None):
     if ncpus is None:
         ncpus = int(ENV.get('PBS_NCPUS', 1))
 
+    commands = shuffle(list(commands))
     jobq = Queue()
     outq = Queue()
     nodes = []
