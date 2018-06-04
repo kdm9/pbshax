@@ -2,31 +2,13 @@
 import argparse as ap
 from sys import stderr, stdout, stdin
 from os import environ as ENV
-from pbshax import parallel
+from pbshax import parallel, make_regions
 import os
-
-def parsefai(fai):
-    with open(fai) as fh:
-        for l in fh:
-            cname, clen, _, _, _ = l.split()
-            clen = int(clen)
-            yield cname, clen
-
-
-def make_regions(refpath, window=1e6, base=1):
-    window = int(window)
-    fai = refpath+".fai"
-    windows = []
-    for cname, clen in parsefai(fai):
-        for start in range(0, clen, window):
-            wlen = min(clen - start, window)
-            windows.append("{}:{:09d}-{:09d}".format(cname, start + base, start+wlen))
-    return windows
 
 
 def main():
     a = ap.ArgumentParser(prog="regionparallel",
-                          description="Make a list of regions of given size from faidx")
+                          description="Run a command in parallel (using pbsdsh) for each region in genome, tracking which regions have finished.")
     a.add_argument("-s", "--size", type=int, default=1000000,
                    help="Size of each region chunk")
     a.add_argument("-b", "--base", type=int, default=1,
@@ -39,15 +21,18 @@ def main():
                    help="Fasta reference file (must be indexed with samtools faidx)")
     a.add_argument("-f", "--regions-finished", type=str, required=False,
                    help="List of regions which have finished, which will be not be re-done.")
+    a.add_argument("-e", "--regions-excluded", type=str, required=False,
+                   help="List of regions which should not be run.")
     a.add_argument("command", type=str,
                    help="Command to run. Regions are inserted where {region} occurs (use in ouput file name).")
     args = a.parse_args()
 
     commands = []
     regions = make_regions(args.reference, args.size, args.base)
-    if args.regions_finished and os.path.exists(args.regions_finished):
-        done = set([l.strip() for l in open(args.regions_finished)])
-        regions = list(set(regions) - done)
+    for excludefile in (args.regions_finished, args.regions_excluded):
+        if excludefile and os.path.exists(excludefile):
+            done = set([l.strip() for l in open(excludefile)])
+            regions = list(set(regions) - done)
     for region in regions:
         donecmd = " && echo " + region + " >> " + args.regions_finished
         cmd = args.command.replace('{region}', region) + donecmd

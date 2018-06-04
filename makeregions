@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+from pbshax import parallel, make_regions
+
+def main():
+    a = ap.ArgumentParser(prog="makeregions",
+                          description="Print a list of regions of given size from faidx")
+    a.add_argument("-s", "--size", type=int, default=1000000,
+                   help="Size of each region chunk")
+    a.add_argument("-b", "--base", type=int, default=1,
+                   help="Coordinate system: 0 means python-style slice indexing, 1 is R-style 1-based indexing. Default 1")
+    a.add_argument("-r", "--reference", type=str, required=True,
+                   help="Fasta reference file (must be indexed with samtools faidx)")
+    a.add_argument("command", type=str,
+                   help="Command to run. Regions are inserted where {region} occurs (use in ouput file name).")
+    args = a.parse_args()
+
+    regions = make_regions(args.reference, args.size, args.base)
+    print(*regions, sep="\n")
+
+
+if __name__ == "__main__":
+    main()
+

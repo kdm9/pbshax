@@ -39,7 +39,7 @@ def parallel(commands, verbose=True, ncpus=None):
     if ncpus is None:
         ncpus = int(ENV.get('PBS_NCPUS', 1))
 
-    commands = shuffle(list(commands))
+    shuffle(list(commands))
     jobq = Queue()
     outq = Queue()
     nodes = []
