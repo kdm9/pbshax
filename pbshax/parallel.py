@@ -35,11 +35,11 @@ def outputter(outq):
         outq.task_done()
 
 
-def parallel(commands, verbose=True, ncpus=None):
+def parallel(commands, verbose=True, ncpus=None, threadseach=1):
     if ncpus is None:
         ncpus = int(ENV.get('PBS_NCPUS', 1))
 
-    shuffle(list(commands))
+    list(commands)
     jobq = Queue()
     outq = Queue()
     nodes = []
@@ -48,7 +48,7 @@ def parallel(commands, verbose=True, ncpus=None):
         jobq.put(cmd)
 
     # Make workers, add one poison pill per worker
-    for i in range(1, ncpus+1):
+    for i in range(1, ncpus+1, threadseach):
         t = Thread(target=worker, args=(i, jobq, outq))
         t.start()
         nodes.append(t)

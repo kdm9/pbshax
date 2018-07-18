@@ -21,8 +21,10 @@ def main():
                    help="Fasta reference file (must be indexed with samtools faidx)")
     a.add_argument("-f", "--regions-finished", type=str, required=False,
                    help="List of regions which have finished, which will be not be re-done.")
-    a.add_argument("-e", "--regions-excluded", type=str, required=False,
+    a.add_argument("-x", "--regions-excluded", type=str, required=False,
                    help="List of regions which should not be run.")
+    a.add_argument("-e", "--procs-per-job", default=1, type=int,
+                   help="each job on input uses N processsors (on same node)")
     a.add_argument("command", type=str,
                    help="Command to run. Regions are inserted where {region} occurs (use in ouput file name).")
     args = a.parse_args()
@@ -34,13 +36,14 @@ def main():
             done = set([l.strip() for l in open(excludefile)])
             regions = list(set(regions) - done)
     for region in regions:
-        donecmd = " && echo " + region + " >> " + args.regions_finished
-        cmd = args.command.replace('{region}', region) + donecmd
+        cmd = args.command.replace('{region}', region)
+        if args.regions_finished:
+            cmd += " && echo " + region + " >> " + args.regions_finished
         commands.append(cmd)
     if args.no_run:
         print(*commands, sep="\n")
     else:
-        parallel(commands, ncpus=args.procs)
+        parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
 
 
 if __name__ == "__main__":
