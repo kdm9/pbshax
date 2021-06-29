@@ -1,0 +1,4 @@
+.*.sw?
+build/
+dist/
+pbshax/_version.py
