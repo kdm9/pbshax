@@ -1,12 +1,39 @@
-#!/usr/bin/env python3
-import argparse as ap
-from sys import stderr, stdout, stdin
-from os import environ as ENV
 from pbshax import parallel, make_regions
+import argparse as ap
+from sys import stdin, stdout, stderr
+from os import environ as ENV
 import os
 
 
-def main():
+def makeregions():
+    a = ap.ArgumentParser(prog="makeregions",
+                          description="Print a list of regions of given size from faidx")
+    a.add_argument("-s", "--size", type=int, default=1000000,
+                   help="Size of each region chunk")
+    a.add_argument("-b", "--base", type=int, default=1,
+                   help="Coordinate system: 0 means python-style slice indexing, 1 is R-style 1-based indexing. Default 1")
+    a.add_argument("-r", "--reference", type=str, required=True,
+                   help="Fasta reference file (must be indexed with samtools faidx)")
+    args = a.parse_args()
+
+    regions = make_regions(args.reference, args.size, args.base)
+    print(*regions, sep="\n")
+
+
+def pbsparallel():
+    a = ap.ArgumentParser(prog="pbsparallel",
+                          description="Run commands (from stdin) in parallel (using pbsdsh).")
+    a.add_argument("-p", "--procs", default=None, type=int,
+                   help="Number of jobs to run in parallel (default: $PBS_NCPUS)")
+    a.add_argument("-e", "--procs-per-job", default=1, type=int,
+                   help="each job on input uses N processsors (on same node)")
+    args = a.parse_args()
+
+    commands = [l.strip() for l in stdin]
+    parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
+
+
+def regionparallel():
     a = ap.ArgumentParser(prog="regionparallel",
                           description="Run a command in parallel (using pbsdsh) for each region in genome, tracking which regions have finished.")
     a.add_argument("-s", "--size", type=int, default=1000000,
@@ -45,6 +72,3 @@ def main():
     else:
         parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
 
-
-if __name__ == "__main__":
-    main()
