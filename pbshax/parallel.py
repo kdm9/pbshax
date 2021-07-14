@@ -7,32 +7,23 @@ from threading import Thread
 from queue import Queue
 from random import shuffle
 
+PBSPARALLEL_BASECOMMAND=ENV.get("PBSPARALLEL_BASECOMMAND", "pbsdsh -n {node} -- bash -l -c")
 
 def worker(node, jobq, outq):
     while True:
         cmd = jobq.get()
         if cmd is None:
+            outq.put(None)
             break
-        cmd = "pbsdsh -n {} -- bash -l -c".format(node).split() + [cmd]
+        cmd = PBSPARALLEL_BASECOMMAND.format(node=node).split() + [cmd]
         try:
             out = spc.check_output(cmd, stderr=spc.STDOUT)
         except spc.CalledProcessError as exc:
-            outq.put(exc.output)
+            outq.put(exc)
             jobq.task_done()
-            break
+            continue
         outq.put(out)
         jobq.task_done()
-
-
-def outputter(outq):
-    while True:
-        out = outq.get()
-        if out is None:
-            break
-        if isinstance(out, bytes):
-            out = out.decode("utf8")
-        print(out, end="")
-        outq.task_done()
 
 
 def parallel(commands, verbose=True, ncpus=None, threadseach=1):
@@ -52,11 +43,32 @@ def parallel(commands, verbose=True, ncpus=None, threadseach=1):
         t.start()
         nodes.append(t)
         jobq.put(None)
-    outt = Thread(target=outputter, args=(outq,))
-    outt.start()
+
+    n_fail = 0
+    exit = 0
+    n_done = 0
+    while True:
+        if n_done == len(nodes):
+            break
+        out = outq.get()
+        if out is None:
+            n_done += 1
+            outq.task_done()
+            continue
+        if isinstance(out, spc.CalledProcessError):
+            n_fail += 1
+            exit = out.returncode
+            out = out.output
+        if isinstance(out, bytes):
+            out = out.decode("utf8")
+        print(out, end="")
+        outq.task_done()
 
     # Join threads
     for t in nodes:
         t.join()
     outq.put(None)
-    outt.join()
+
+    if exit != 0:
+        raise RuntimeError(f"{n_fail} jobs failed with exit code {exit}")
+    return exit

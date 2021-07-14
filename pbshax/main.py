@@ -1,6 +1,6 @@
 from pbshax import parallel, make_regions
 import argparse as ap
-from sys import stdin, stdout, stderr
+from sys import stdin, stdout, stderr, exit
 from os import environ as ENV
 import os
 
@@ -30,7 +30,11 @@ def pbsparallel():
     args = a.parse_args()
 
     commands = [l.strip() for l in stdin]
-    parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
+    try:
+        parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
+    except Exception as exc:
+        print(str(exc))
+        exit(1)
 
 
 def regionparallel():
@@ -70,5 +74,9 @@ def regionparallel():
     if args.no_run:
         print(*commands, sep="\n")
     else:
-        parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
+        try:
+            parallel(commands, ncpus=args.procs, threadseach=args.procs_per_job)
+        except Exception as exc:
+            print(str(exc))
+            exit(1)
 
